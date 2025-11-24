@@ -17,12 +17,14 @@ from .chunker import DocumentChunk
 # Import flexible providers
 try:
     from ..utils.providers import get_embedding_client, get_embedding_model
+    from ..utils.config_manager import get_active_embedding_model
 except ImportError:
     # For direct execution or testing
     import sys
     import os
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from utils.providers import get_embedding_client, get_embedding_model
+    from utils.config_manager import get_active_embedding_model
 
 # Load environment variables
 load_dotenv()
@@ -31,15 +33,13 @@ logger = logging.getLogger(__name__)
 
 # Initialize client with flexible provider
 embedding_client = get_embedding_client()
-EMBEDDING_MODEL = get_embedding_model()
-
 
 class EmbeddingGenerator:
     """Generates embeddings for document chunks."""
     
     def __init__(
         self,
-        model: str = EMBEDDING_MODEL,
+        model: Optional[str] = None,
         batch_size: int = 100,
         max_retries: int = 3,
         retry_delay: float = 1.0
@@ -48,12 +48,19 @@ class EmbeddingGenerator:
         Initialize embedding generator.
         
         Args:
-            model: OpenAI embedding model to use
+            model: OpenAI embedding model to use. If None, fetches from active config.
             batch_size: Number of texts to process in parallel
             max_retries: Maximum number of retry attempts
             retry_delay: Delay between retries in seconds
         """
-        self.model = model
+        # Resolve model: Arg > Active Config > Env/Default
+        if model:
+            self.model = model
+        else:
+            self.model = get_active_embedding_model()
+            
+        logger.info(f"Embedding Generator initialized with model: {self.model}")
+
         self.batch_size = batch_size
         self.max_retries = max_retries
         self.retry_delay = retry_delay
@@ -65,11 +72,11 @@ class EmbeddingGenerator:
             "text-embedding-ada-002": {"dimensions": 1536, "max_tokens": 8191}
         }
         
-        if model not in self.model_configs:
-            logger.warning(f"Unknown model {model}, using default config")
+        if self.model not in self.model_configs:
+            logger.warning(f"Unknown model {self.model}, using default config")
             self.config = {"dimensions": 1536, "max_tokens": 8191}
         else:
-            self.config = self.model_configs[model]
+            self.config = self.model_configs[self.model]
     
     async def generate_embedding(self, text: str) -> List[float]:
         """
@@ -335,7 +342,7 @@ class EmbeddingCache:
 
 # Factory function
 def create_embedder(
-    model: str = EMBEDDING_MODEL,
+    model: Optional[str] = None,
     use_cache: bool = True,
     **kwargs
 ) -> EmbeddingGenerator:
@@ -343,7 +350,7 @@ def create_embedder(
     Create embedding generator with optional caching.
     
     Args:
-        model: Embedding model to use
+        model: Embedding model to use (optional, defaults to active config)
         use_cache: Whether to use caching
         **kwargs: Additional arguments for EmbeddingGenerator
     

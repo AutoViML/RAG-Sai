@@ -13,7 +13,7 @@ import argparse
 
 from dotenv import load_dotenv
 
-from .chunker import ChunkingConfig, create_chunker
+from .chunker import ChunkingConfig, create_chunker, DocumentChunk
 from .embedder import create_embedder
 from .contextual_enrichment import create_contextual_enricher
 

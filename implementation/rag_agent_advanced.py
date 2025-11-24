@@ -49,7 +49,7 @@ async def initialize_bm25():
             await initialize_db()
 
         async with db_pool.acquire() as conn:
-            chunks_records = await conn.fetch("SELECT chunk_id, content FROM chunks")
+            chunks_records = await conn.fetch("SELECT id::text as chunk_id, content FROM chunks")
         
         if not chunks_records:
             logger.warning("No chunks found in DB to build BM25 index.")
@@ -145,6 +145,23 @@ Return only the 3 variations, one per line, without numbers or bullets."""
 # STRATEGY 2 & 3: MULTI-QUERY RAG (parallel search with variations)
 # ======================
 
+async def search_single_query(query: str, limit: int):
+    """Helper for parallel execution to avoid shared connection issues."""
+    from ingestion.embedder import create_embedder
+    embedder = create_embedder()
+    
+    query_embedding = await embedder.embed_query(query)
+    embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
+    
+    async with db_pool.acquire() as conn:
+        return await conn.fetch(
+            """
+            SELECT * FROM match_chunks($1::vector, $2)
+            """,
+            embedding_str,
+            limit
+        )
+
 async def search_with_multi_query(
     ctx: RunContext[None], query: str, limit: int = 5
 ) -> str:
@@ -168,34 +185,14 @@ async def search_with_multi_query(
         queries = await expand_query_variations(ctx, query)
         logger.info(f"Multi-query search with {len(queries)} variations")
 
-        # Generate embeddings for all queries
-        from ingestion.embedder import create_embedder
-        embedder = create_embedder()
+        # Execute searches in parallel using helper
+        search_tasks = [search_single_query(q, limit) for q in queries]
+        results_lists = await asyncio.gather(*search_tasks)
 
-        # Execute searches in parallel
+        # Collect all results
         all_results = []
-        search_tasks = []
-
-        async with db_pool.acquire() as conn:
-            for q in queries:
-                query_embedding = await embedder.embed_query(q)
-                embedding_str = '[' + ','.join(map(str, query_embedding)) + ']'
-
-                task = conn.fetch(
-                    """
-                    SELECT * FROM match_chunks($1::vector, $2)
-                    """,
-                    embedding_str,
-                    limit
-                )
-                search_tasks.append(task)
-
-            # Execute all searches concurrently
-            results_lists = await asyncio.gather(*search_tasks)
-
-            # Collect all results
-            for results in results_lists:
-                all_results.extend(results)
+        for results in results_lists:
+            all_results.extend(results)
 
         if not all_results:
             return "No relevant information found."
@@ -567,6 +564,9 @@ async def search_with_hybrid_retrieval(
             await initialize_db()
         if not bm25_index:
             await initialize_bm25()
+        
+        if not bm25_index:
+            return "Hybrid search unavailable: Index could not be initialized (database might be empty)."
 
         # 1. Dense retrieval (from existing vector search)
         from ingestion.embedder import create_embedder
@@ -595,7 +595,8 @@ async def search_with_hybrid_retrieval(
         k = 60  # RRF constant
 
         for i, doc in enumerate(dense_results):
-            chunk_id = str(doc["chunk_id"])
+            # Fix: Use 'id' from chunks table
+            chunk_id = str(doc["id"])
             if chunk_id not in fused_scores:
                 fused_scores[chunk_id] = 0
             fused_scores[chunk_id] += 1 / (k + i + 1)
@@ -617,7 +618,13 @@ async def search_with_hybrid_retrieval(
 
         async with db_pool.acquire() as conn:
             unique_results = await conn.fetch(
-                "SELECT * FROM chunks WHERE chunk_id = ANY($1::uuid[])", top_chunk_ids
+                """
+                SELECT c.*, d.title as document_title 
+                FROM chunks c 
+                JOIN documents d ON c.document_id = d.id 
+                WHERE c.id = ANY($1::uuid[])
+                """, 
+                top_chunk_ids
             )
 
         response_parts = [
@@ -788,7 +795,8 @@ async def answer_with_uncertainty(
         if len(responses) < 2:
             return f"Answer:\n{responses[0]}\n\n---\nUncertainty Score: N/A"
 
-        response_embeddings = await embedder.embed_documents(responses)
+        # Fix: Use correct method name
+        response_embeddings = await embedder.generate_embeddings_batch(responses)
         
         # Calculate cosine similarity between the first embedding and the rest
         similarities = [
