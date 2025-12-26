@@ -47,6 +47,7 @@ import time
 import os
 import sys
 import re
+import html
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
@@ -347,9 +348,10 @@ async def execute_pipeline(config: StrategyConfig, query: str) -> Dict[str, Any]
             formatted = retrieval_result
             retrieval_meta = {}
 
-        # 2. Generation phase (if any)
+        # 2. Generation phase - always generate an answer
         generation_start = time.time()
         final_output = formatted
+        raw_chunks = formatted  # Store raw chunks for toggle
 
         if config.generation_style == "Fact Verification":
             from rag_agent_advanced import answer_with_fact_verification
@@ -364,6 +366,8 @@ async def execute_pipeline(config: StrategyConfig, query: str) -> Dict[str, Any]
             final_output = await answer_with_uncertainty(None, query)
             generation_meta = {"generation_style": "uncertainty_estimation"}
         else:
+            # Standard generation - always generate an answer from retrieved chunks
+            final_output = await generate_answer_from_context(formatted, query, config.llm_model)
             generation_meta = {"generation_style": "standard"}
 
         generation_end = time.time()
@@ -392,10 +396,12 @@ async def execute_pipeline(config: StrategyConfig, query: str) -> Dict[str, Any]
 
         # Clean output from common prefixes like 'Answer:'
         cleaned_output = clean_output(final_output) if isinstance(final_output, str) else final_output
+        cleaned_raw_chunks = clean_output(raw_chunks) if isinstance(raw_chunks, str) else raw_chunks
 
         return {
             "status": "Success",
             "output": cleaned_output,
+            "raw_chunks": cleaned_raw_chunks,
             "duration": duration,
             "cost_label": estimate_cost(config),
             "name": config.name,
@@ -427,6 +433,31 @@ def clean_output(text: str) -> str:
     # Remove leading 'Answer:' and similar wrappers
     text = re.sub(r"^\s*Answer\s*:\s*\n?", "", text, flags=re.IGNORECASE)
     return text.strip()
+
+
+async def generate_answer_from_context(context: str, query: str, llm_model: str) -> str:
+    """Generate a natural language answer from retrieved context."""
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        prompt = f"""Based on the following context, provide a comprehensive and accurate answer to the question.
+
+Context:
+{context}
+
+Question: {query}
+
+Provide a clear, well-structured answer based solely on the information in the context above:"""
+        
+        response = await client.chat.completions.create(
+            model=llm_model,
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        logger.error(f"Answer generation failed: {e}", exc_info=True)
+        return f"Error generating answer: {str(e)}"
 
 # --- Page: Learning Center ---
 
@@ -805,6 +836,13 @@ def render_retrieval_page():
                     chunking_strategy=chunking
                 ))
 
+    # Display toggle for raw chunks vs generated answer
+    show_raw_chunks = st.checkbox(
+        "📄 Show Raw Chunks (instead of generated answer)",
+        value=False,
+        help="Toggle between viewing the raw retrieved chunks and the generated natural language answer"
+    )
+
     # Run Button
     if st.button("🚀 Run Comparison", type="primary", use_container_width=True):
         if not user_query:
@@ -863,21 +901,28 @@ def render_retrieval_page():
                             top_sources_html = ''
                             if top_sources:
                                 sample = ', '.join(top_sources[:3])
-                                top_sources_html = f"<div style=\"margin-top:8px;color:var(--metric-text)\"><strong>Top Sources:</strong> {sample}</div>"
+                                top_sources_html = f"<div style=\"margin-top:8px;color:var(--metric-text)\"><strong>Top Sources:</strong> {html.escape(sample)}</div>"
 
-                            # Display card
-                            st.markdown(f"""
-                            <article class="strategy-container" aria-label="Results for {res['name']}">
-                                <header style="margin-bottom: 15px;">
-                                    <h3 style="margin: 0; font-size: 1.2em;">{res['name']}</h3>
-                                    <div class="metric-container" style="margin-top: 8px;">{metrics_html}</div>
+                            # Choose content based on toggle
+                            display_content = res.get('raw_chunks') if show_raw_chunks else res['output']
+                            content_type_label = "Raw Retrieved Chunks" if show_raw_chunks else "Generated Answer"
+
+                            # Use Streamlit container with custom styling via CSS class
+                            with st.container():
+                                # Apply styling and display header
+                                st.markdown(f"""
+                                <div style="border: 2px solid var(--card-border); border-radius: 12px; padding: 24px; background-color: var(--card-bg); box-shadow: var(--shadow); margin-bottom: 10px;">
+                                    <h3 style="margin: 0; font-size: 1.2em; color: var(--text-color);">{html.escape(res['name'])}</h3>
+                                    <div style="margin-top: 8px;">{metrics_html}</div>
                                     {top_sources_html}
-                                </header>
-                                <section class="result-box" role="region" aria-label="Output content">
-                                    {res['output']}
-                                </section>
-                            </article>
-                            """, unsafe_allow_html=True)
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                # Display content label and text (pure Streamlit, no HTML)
+                                st.markdown(f"**{content_type_label}**")
+                                st.markdown("")  # Spacing
+                                # Display content with proper line breaks
+                                st.markdown(display_content)
 
                             # Detailed metadata expander
                             with st.expander("Show detailed metadata and traces"):

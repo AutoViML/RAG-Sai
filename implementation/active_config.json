@@ -1,7 +1,7 @@
 {
-  "chunk_size": 500,
+  "chunk_size": 800,
   "chunk_overlap": 200,
   "chunker_type": "semantic",
   "embedding_model": "text-embedding-3-small",
-  "use_contextual_enrichment": true
+  "use_contextual_enrichment": false
 }

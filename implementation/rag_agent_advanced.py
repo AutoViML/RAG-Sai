@@ -815,7 +815,11 @@ async def search_with_self_reflection_meta(ctx: RunContext[None], query: str, li
 
         # Format results
         response_parts = [f"[Source: {r['document_title']}]\n{r['content']}\n" for r in results]
+        top_sources = [r['document_title'] for r in results]
         formatted = (f"Found {len(response_parts)} results (self-reflection).\n\n" + "\n---\n".join(response_parts))
+        
+        # Add top_sources to metadata
+        meta['top_sources'] = top_sources[:5]
 
         return {"formatted": formatted, "meta": meta}
 
@@ -948,7 +952,8 @@ async def search_with_hybrid_retrieval_meta(ctx: RunContext[None], query: str, l
         # Guard against mismatched sizes or empty BM25 chunks (stubbed in tests)
         sparse_results = []
         sparse_count = 0
-        if bm25_chunks and bm25_scores:
+        # Check if both exist and have elements (use len() to avoid numpy array truthiness issue)
+        if bm25_chunks is not None and bm25_scores is not None and len(bm25_chunks) > 0 and len(bm25_scores) > 0:
             # Ensure consistent lengths
             if len(bm25_scores) != len(bm25_chunks):
                 min_len = min(len(bm25_scores), len(bm25_chunks))
@@ -1043,15 +1048,25 @@ async def answer_with_fact_verification(ctx: RunContext[None], query: str) -> st
         )
         claims_str = claim_res.choices[0].message.content.strip()
 
-        # 4. Verify claims
-        verify_prompt = f"Context:\n{context_str}\n\nClaims:\n{claims_str}\n\nVerify each claim based *only* on the context. Respond with SUPPORTED, CONTRADICTED, or NEUTRAL for each."
+        # 4. Verify claims and format with claim text
+        verify_prompt = f"""Context:\n{context_str}
+
+Claims to verify:
+{claims_str}
+
+For each claim above, verify it based *only* on the context provided. For each claim, respond in this format:
+Claim: [restate the claim]
+Verification: [SUPPORTED/CONTRADICTED/NEUTRAL]
+
+Provide one verification per claim."""
+        
         verify_res = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": verify_prompt}]
         )
         verification = verify_res.choices[0].message.content.strip()
 
-        return f"{answer}\n\n---\nFact Verification:\n{verification}"
+        return f"{answer}\n\n---\n**Fact Verification:**\n\n{verification}"
 
     except Exception as e:
         logger.error(f"Fact verification failed: {e}", exc_info=True)
