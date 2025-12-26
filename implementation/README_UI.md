@@ -55,3 +55,14 @@ When you click **🚀 Run Comparison**:
 
 ### 3. Metrics Documentation
 Expand the "📊 Understanding RAG Metrics" section at the bottom for detailed definitions.
+
+## 🖼️ Screenshots
+Please attach screenshots to PRs to help reviewers. Recommended screenshot:
+- Strategy Lab showing at least one strategy result with the metadata expander open (include the `total_tokens` and timing tags).
+
+To include a screenshot in the PR, drag & drop the image into the PR or add it to `implementation/docs/screenshots/` and reference it in the PR body.
+
+## 🛠️ Developer Notes
+- Dev/test dependency: `pytest-asyncio` has been added to the `dev` optional dependencies in `pyproject.toml`. Tests were migrated to async style using `@pytest.mark.asyncio` and `await` where appropriate.
+- Unit tests rely on test stubs for optional external libs; see `rag_agent_advanced.py` for `# type: ignore[import]` annotations used to silence type diagnostics in dev environments.
+- If you run tests locally, ensure dev dependencies are installed with: `pip install -e .[dev]` (or `pip install pytest-asyncio`).
