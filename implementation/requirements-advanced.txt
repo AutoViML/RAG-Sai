@@ -31,3 +31,15 @@ pytest-cov>=4.1.0
 factory-boy>=3.3.0
 faker>=19.3.0
 streamlit
+
+# Optional extras (OCR / ASR / Image processing)
+# Install these if you want Docling to support scanned PDFs, OCR engines, or audio transcription
+onnxruntime>=1.15.0        # used by RapidOCR and ONNX-based OCR models
+easyocr>=1.5.0             # optional OCR engine
+# tesserocr requires system tesseract (apt: tesseract-ocr); include only if system dependency is present
+tesserocr>=2.5.3
+openai-whisper>=20250625   # Whisper ASR for audio transcription (or use `uv sync --extra asr`)
+opencv-python-headless>=4.7.0  # Image processing without GUI dependencies
+ffmpeg-python>=0.2.0      # Audio and video processing
+pydub>=0.25.1             # Audio processing
+librosa>=0.10.0           # Audio analysis

@@ -72,6 +72,40 @@ def check_environment():
 
 env_errors, env_warnings = check_environment()
 
+# Auto-start PostgreSQL if not running
+def ensure_postgres_running():
+    """Ensure PostgreSQL container is running."""
+    import subprocess
+    try:
+        # Check if Docker is available
+        result = subprocess.run(
+            ["docker", "ps", "--filter", "name=rag_postgres", "--format", "{{.Names}}"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        
+        if "rag_postgres" not in result.stdout:
+            # PostgreSQL not running, start it
+            compose_path = os.path.join(os.path.dirname(__file__), "docker-compose.yml")
+            if os.path.exists(compose_path):
+                subprocess.run(
+                    ["docker-compose", "up", "-d", "postgres"],
+                    cwd=os.path.dirname(__file__),
+                    capture_output=True,
+                    timeout=30
+                )
+                # Wait for PostgreSQL to be ready
+                time.sleep(3)
+                return True
+        return True
+    except Exception as e:
+        # Silently fail if Docker not available or error occurs
+        return False
+
+# Start PostgreSQL automatically
+ensure_postgres_running()
+
 # Import backend logic
 try:
     from rag_agent_advanced import (
@@ -379,6 +413,44 @@ def clean_output(text: str) -> str:
     text = re.sub(r"^\s*Answer\s*:\s*\n?", "", text, flags=re.IGNORECASE)
     return text.strip()
 
+# --- Page: Learning Center ---
+
+def render_learning_page():
+    st.header("📚 Strategies")
+    st.markdown("""
+    Welcome to the **RAG Strategy Lab**! This platform is designed to help you understand and implement advanced Retrieval-Augmented Generation strategies.
+    
+    ### 🚀 Quick Start Guide
+    1. **Ingest Documents:** Go to the **Ingestion Lab** to upload and process your documents.
+    2. **Experiment:** Go to the **Strategy Lab** to compare different RAG strategies side-by-side.
+    
+    ---
+    
+    ### 🧠 All 16 RAG Strategies
+    
+    #### 1. Ingestion & Chunking
+    - **✂️ Context-Aware Chunking:** Splits documents based on structure (headings, sections) rather than just token count.
+    - **📏 Adaptive Chunking:** Dynamically adjusts chunk size based on content density and semantic coherence.
+    - **⏳ Late Chunking:** Embeds the full document first, then chunks the embeddings to preserve global context.
+    - **📝 Contextual Retrieval:** Adds document-level context (summary/title) to each chunk before embedding.
+    - **🎯 Fine-tuned Embeddings:** Trains embedding models on domain-specific data for better representation.
+    - **🕸️ Knowledge Graphs:** Maps entities and relationships to capture structured knowledge alongside vectors.
+    
+    #### 2. Retrieval & Querying
+    - **🔍 Re-ranking:** Two-stage process: fast vector search followed by high-precision cross-encoder scoring.
+    - **➕ Query Expansion:** Enriches a short query with related terms and context to improve recall.
+    - **🔀 Multi-Query RAG:** Generates multiple diverse query variations to capture different perspectives.
+    - **⚖️ Hybrid Retrieval:** Combines dense vector search (semantic) with sparse BM25 search (keyword).
+    - **🌳 Hierarchical RAG:** Searches summaries or parent chunks first, then retrieves detailed child chunks.
+    - **🤖 Agentic RAG:** Uses an autonomous agent to select the best retrieval tool (search, full doc, etc.) for the query.
+    - **🤔 Self-Reflective RAG:** Iteratively critiques and refines search results until they meet a quality threshold.
+    
+    #### 3. Generation & Reasoning
+    - **✅ Fact Verification:** Generates an answer and then cross-checks every claim against source text.
+    - **🔗 Multi-Hop Reasoning:** Breaks down complex questions into sub-questions and retrieves information for each step.
+    - **📊 Uncertainty Estimation:** Generates multiple answers to estimate confidence and identify ambiguity.
+    """)
+
 # --- Page: Ingestion Lab ---
 
 def render_ingestion_page():
@@ -419,7 +491,7 @@ def render_ingestion_page():
                 
                 if st.button("💾 Save Uploaded Files", type="secondary"):
                     try:
-                        docs_dir = "documents"
+                        docs_dir = os.path.join(os.path.dirname(__file__), "documents")
                         os.makedirs(docs_dir, exist_ok=True)
                         saved_files = []
                         
@@ -437,7 +509,7 @@ def render_ingestion_page():
                         st.error(f"Error saving files: {e}")
         
         with tab2:
-            docs_dir = "documents"
+            docs_dir = os.path.join(os.path.dirname(__file__), "documents")
             if os.path.exists(docs_dir):
                 files = [f for f in os.listdir(docs_dir) if os.path.isfile(os.path.join(docs_dir, f))]
                 if files:
@@ -545,7 +617,7 @@ def render_ingestion_page():
                     async def run_pipeline():
                         pipeline = DocumentIngestionPipeline(
                             config=ingest_config,
-                            documents_folder="documents",
+                            documents_folder=os.path.join(os.path.dirname(__file__), "documents"),
                             clean_before_ingest=True
                         )
                         
@@ -777,12 +849,14 @@ with st.sidebar:
     
     st.markdown("---")
     
-    page = st.radio("Navigation", ["Ingestion Lab", "Strategy Lab"], index=0)
+    page = st.radio("Navigation", ["Strategies", "Ingestion Lab", "Strategy Lab"], index=0)
     st.divider()
     st.button("🎨 Toggle Theme", on_click=toggle_theme, use_container_width=True)
     st.caption(f"Current Theme: **{st.session_state.theme.title()}**")
 
-if page == "Ingestion Lab":
+if page == "Strategies":
+    render_learning_page()
+elif page == "Ingestion Lab":
     render_ingestion_page()
 else:
     render_retrieval_page()

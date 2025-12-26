@@ -14,8 +14,24 @@ cd implementation
 pip install -r requirements-advanced.txt
 # or with uv:
 uv sync
+# Optional extras (OCR / ASR / image processing)
+# If you want scanned PDF OCR or audio transcription (Whisper), install these:
+# (recommended only if you need them - they increase disk usage and require extra system packages)
+#  - ONNX-based OCR: onnxruntime
+#  - EasyOCR: easyocr
+#  - Tesseract bindings: tesserocr (requires system package 'tesseract-ocr')
+#  - Whisper ASR: openai-whisper (requires ffmpeg and additional disk space)
+#  - Image processing: opencv-python-headless
 
-# 3. Setup PostgreSQL
+# Example (installs these extras into the venv):
+. .venv/bin/activate && pip install --no-cache-dir onnxruntime easyocr tesserocr opencv-python-headless
+# For Whisper ASR (optional, large and may require compiling wheels):
+. .venv/bin/activate && pip install --no-cache-dir openai-whisper
+
+# System packages (if you use tesserocr or Whisper):
+# Debian/Ubuntu:
+# sudo apt-get update && sudo apt-get install -y tesseract-ocr ffmpeg libgl1 libglib2.0-0
+```# 3. Setup PostgreSQL
 sudo service postgresql start
 sudo -u postgres psql -c "CREATE DATABASE ragdb;"
 sudo -u postgres psql -c "CREATE USER raguser WITH PASSWORD 'ragpass123';"
