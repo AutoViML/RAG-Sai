@@ -40,7 +40,7 @@ class EmbeddingGenerator:
     def __init__(
         self,
         model: Optional[str] = None,
-        batch_size: int = 50,
+        batch_size: int = 25,
         max_retries: int = 5,
         retry_delay: float = 2.0
     ):
