@@ -74,8 +74,8 @@ When running tests:
 
 Since screenshots require a live database and API keys, this repository provides:
 
-1. **Detailed Feature Descriptions:** See `implementation/docs/screenshots/FEATURE_GUIDE.md`
-2. **Expected Output Examples:** Shown in this README
+1. **Detailed Feature Descriptions:** See this README for expected outputs
+2. **Expected Output Examples:** Shown throughout this document
 3. **Test Validation:** Automated tests prove functionality
 4. **Code Examples:** Working code demonstrates all features
 
@@ -106,8 +106,9 @@ pytest test_lora_shift_ingestion.py -v
 ## 📖 Reference
 
 For detailed expected outputs and feature descriptions without requiring live setup, see:
-- **FEATURE_GUIDE.md** - Comprehensive feature descriptions with expected outputs
-- **README.md** (this file) - Screenshot organization and guidance
+- **README.md** (this file) - Screenshot organization, guidance, and expected outputs
+- **../../STUDENT_GUIDE.md** - Complete learning curriculum with practical examples
+- **../../TROUBLESHOOTING.md** - Problem-solving guide
 
 ---
 

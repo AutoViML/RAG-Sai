@@ -62,16 +62,6 @@ class TestChunkingLogic:
     """Test chunking logic on LoRA-SHIFT paper."""
     
     @pytest.fixture
-    def mock_chunker_config(self):
-        """Mock chunking configuration."""
-        return {
-            'chunk_size': 512,
-            'chunk_overlap': 50,
-            'max_chunk_size': 1024,
-            'use_semantic_splitting': True
-        }
-    
-    @pytest.fixture
     def sample_text(self):
         """Sample text for chunking tests."""
         return """# LoRA-SHIFT: Efficient Parameter Adaptation
