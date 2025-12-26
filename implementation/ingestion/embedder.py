@@ -98,6 +98,19 @@ class EmbeddingGenerator:
                     model=self.model,
                     input=text
                 )
+                # Capture token usage if present on response
+                try:
+                    total_tokens = None
+                    if hasattr(response, "usage"):
+                        total_tokens = getattr(response.usage, "total_tokens", None)
+                    elif isinstance(response, dict):
+                        usage = response.get("usage")
+                        if isinstance(usage, dict):
+                            total_tokens = usage.get("total_tokens")
+
+                    self.last_usage = int(total_tokens) if total_tokens is not None else None
+                except Exception:
+                    self.last_usage = None
                 
                 return response.data[0].embedding
                 
@@ -154,7 +167,16 @@ class EmbeddingGenerator:
                     model=self.model,
                     input=processed_texts
                 )
-                
+                # Capture token usage if available
+                try:
+                    self.last_usage = None
+                    if hasattr(response, 'usage') and getattr(response.usage, 'total_tokens', None) is not None:
+                        self.last_usage = int(getattr(response.usage, 'total_tokens'))
+                    elif isinstance(response, dict) and response.get('usage') and isinstance(response['usage'], dict):
+                        self.last_usage = int(response['usage'].get('total_tokens')) if response['usage'].get('total_tokens') else None
+                except Exception:
+                    self.last_usage = None
+
                 return [data.embedding for data in response.data]
                 
             except RateLimitError as e:
