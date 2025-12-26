@@ -139,7 +139,21 @@ st.selectbox("Chunking", ["semantic", "fixed", "adaptive"], index=0, key=f"chunk
 - Improved accessibility (focus states, ARIA labels)
 - Visual status indicators (✅/❌/⬜)
 
-**Impact:** Professional, polished interface that makes RAG techniques accessible to learners.
+**Impact:** Professional, polished interface that makes RAG techniques accessible to learners
+
+---
+
+### Strategy Lab: Expanded Metadata (New)
+**Problem:** Strategy results showed only a minimal set of metrics (latency + cost), which made debugging and performance analysis difficult.
+
+**Solution:**
+- Added metadata-enabled wrappers (`search_with_*_meta`) that return structured metadata for retrieval phases (counts, top sources, rerank scores, etc.).
+- `execute_pipeline()` now captures per-phase timings (retrieval time, generation time) and includes the metadata in its result payload.
+- Strategy Lab UI updated to show additional metric tags (retrieval/generation times, returned counts, top sources) and an expandable JSON view for full traces.
+
+**Impact:** Users can now inspect full metadata for each strategy run (timing breakdowns, sources, rerank info), making comparisons and debugging far easier.
+
+**Update:** We added exact token usage reporting (where provided by the API) to metadata, and removed redundant "Answer:" labels from generated outputs to make UI rendering cleaner and more readable.
 
 ## 📊 By The Numbers
 

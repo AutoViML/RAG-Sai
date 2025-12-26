@@ -43,8 +43,15 @@ When you click **🚀 Run Comparison**:
 *   All selected strategies run in parallel.
 *   Results are displayed in side-by-side columns.
 *   **Metrics:** Each result shows:
-    *   ⏱️ **Latency:** Execution time in milliseconds.
+    *   ⏱️ **Latency:** Execution time in milliseconds (end-to-end).
+    *   🔎 **Retrieval Time:** Time spent fetching and (optionally) re-ranking results.
+    *   🧠 **Generation Time:** Time spent in LLM generation (when applicable).
+    *   📄 **Returned Results:** Number of result chunks returned by retrieval.
+    *   📚 **Top Sources:** Up to 3 top contributing document titles shown inline.
+    *   🔢 **Total Tokens:** Exact total tokens consumed by LLM calls when available (shown in metadata). Do not rely on estimates—this shows API-provided counts.
     *   🏷️ **Cost Class:** Estimated cost (Fast/Medium/Slow).
+
+*   **Details:** For power users, click **Show detailed metadata and traces** on a result to view the full metadata JSON with retrieval details, rerank scores, generation style, timing break-down, and precise token counts (field: `total_tokens`, plus per-call details when available).
 
 ### 3. Metrics Documentation
 Expand the "📊 Understanding RAG Metrics" section at the bottom for detailed definitions.

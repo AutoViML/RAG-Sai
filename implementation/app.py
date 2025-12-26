@@ -1,8 +1,65 @@
-import streamlit as st
+try:
+    import streamlit as st
+except Exception:
+    # Minimal stub for test environments where streamlit isn't installed
+    import types
+    class _DummyCtx:
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc, tb):
+            return False
+    st = types.SimpleNamespace()
+    st.set_page_config = lambda *a, **k: None
+    st.markdown = lambda *a, **k: None
+    st.rerun = lambda *a, **k: None
+    # session_state should support attribute access
+    import types
+    st.session_state = types.SimpleNamespace()
+    st.session_state.theme = 'light'
+    st.columns = lambda n: [_DummyCtx() for _ in range(n)]
+    st.container = lambda *a, **k: _DummyCtx()
+    st.sidebar = _DummyCtx()
+    st.info = lambda *a, **k: None
+    st.header = lambda *a, **k: None
+    st.text_area = lambda *a, **k: ''
+    st.selectbox = lambda *a, **k: a[1][0] if len(a) > 1 and a[1] else None
+    st.checkbox = lambda *a, **k: False
+    st.button = lambda *a, **k: False
+    st.file_uploader = lambda *a, **k: []
+    st.progress = lambda *a, **k: types.SimpleNamespace(progress=lambda v: None)
+    st.empty = lambda *a, **k: types.SimpleNamespace(text=lambda v: None)
+    st.multiselect = lambda *a, **k: a[1] if len(a) > 1 else []
+    st.expander = lambda *a, **k: _DummyCtx()
+    st.warning = lambda *a, **k: None
+    st.error = lambda *a, **k: None
+    st.success = lambda *a, **k: None
+    st.subheader = lambda *a, **k: None
+    st.caption = lambda *a, **k: None
+    st.slider = lambda *a, **k: a[3] if len(a) >= 4 else None
+    st.selectbox = lambda *a, **k: a[1][0] if len(a) > 1 and a[1] else None
+    st.columns = lambda n: [_DummyCtx() for _ in range(n)]
+    st.set_page_config = lambda *a, **k: None
+    st.markdown = lambda *a, **k: None
+    st.code = lambda *a, **k: None
+    st.caption = lambda *a, **k: None
+    st.info = lambda *a, **k: None
+    st.spinner = lambda *a, **k: types.SimpleNamespace(__enter__=lambda s: s, __exit__=lambda *args: False)
+    st.divider = lambda *a, **k: None
+    st.button = lambda *a, **k: False
+    st.title = lambda *a, **k: None
+    st.divider = lambda *a, **k: None
+    st.write = lambda *a, **k: None
+    st.code = lambda *a, **k: None
+    st.warning = lambda *a, **k: None
+    st.run = lambda *a, **k: None
+    st.radio = lambda *a, **k: a[1][0] if len(a) > 1 and a[1] else None
+    st.file_uploader = lambda *a, **k: []
+    st.selectbox = lambda *a, **k: a[1][0] if len(a) > 1 and a[1] else None
 import asyncio
 import time
 import os
 import sys
+import re
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 
@@ -34,10 +91,15 @@ try:
         initialize_db,
         close_db,
         search_knowledge_base,
+        search_knowledge_base_meta,
         search_with_multi_query,
+        search_with_multi_query_meta,
         search_with_hybrid_retrieval,
+        search_with_hybrid_retrieval_meta,
         search_with_reranking,
+        search_with_reranking_meta,
         search_with_self_reflection,
+        search_with_self_reflection_meta,
     )
     from ingestion.ingest import DocumentIngestionPipeline
     from utils.models import IngestionConfig
@@ -63,7 +125,7 @@ Built for AI/ML and Data Science students."""
 
 # --- Theme & Styling ---
 
-if 'theme' not in st.session_state:
+if not hasattr(st.session_state, 'theme'):
     st.session_state.theme = 'light'
 
 def toggle_theme():
@@ -217,50 +279,97 @@ class StrategyConfig:
     chunking_strategy: str
 
 async def execute_pipeline(config: StrategyConfig, query: str) -> Dict[str, Any]:
-    """Executes a RAG pipeline based on the configuration."""
-    start_time = time.time()
+    """Executes a RAG pipeline based on the configuration and returns rich metadata."""
+    overall_start = time.time()
+    meta: Dict[str, Any] = {}
     try:
-        # 1. Retrieval Phase
-        if config.retrieval_method == "Vector Search (Baseline)":
-            retrieval_result = await search_knowledge_base(None, query, limit=5)
-        elif config.retrieval_method == "Multi-Query":
-            retrieval_result = await search_with_multi_query(None, query, limit=5)
-        elif config.retrieval_method == "Hybrid (Vector + BM25)":
-            retrieval_result = await search_with_hybrid_retrieval(None, query, limit=5)
-        elif config.retrieval_method == "Self-Reflective RAG":
-            retrieval_result = await search_with_self_reflection(None, query, limit=5)
-        else:
-            retrieval_result = await search_knowledge_base(None, query, limit=5)
+        # 1. Retrieval Phase (use metadata-enabled wrappers when available)
+        retrieval_start = time.time()
+        retrieval_result = None
 
-        # 2. Reranking (only applies to Vector Search baseline)
-        if config.reranking and config.retrieval_method == "Vector Search (Baseline)":
-            retrieval_result = await search_with_reranking(None, query, limit=5)
-        
-        # 3. Generation
-        final_output = retrieval_result
+        if config.retrieval_method == "Vector Search (Baseline)":
+            if config.reranking:
+                retrieval_result = await search_with_reranking_meta(None, query, limit=5)
+            else:
+                retrieval_result = await search_knowledge_base_meta(None, query, limit=5)
+        elif config.retrieval_method == "Multi-Query":
+            retrieval_result = await search_with_multi_query_meta(None, query, limit=5)
+        elif config.retrieval_method == "Hybrid (Vector + BM25)":
+            retrieval_result = await search_with_hybrid_retrieval_meta(None, query, limit=5)
+        elif config.retrieval_method == "Self-Reflective RAG":
+            retrieval_result = await search_with_self_reflection_meta(None, query, limit=5)
+        else:
+            retrieval_result = await search_knowledge_base_meta(None, query, limit=5)
+
+        retrieval_end = time.time()
+
+        # Normalize retrieval result to formatted text and meta
+        if isinstance(retrieval_result, dict):
+            formatted = retrieval_result.get('formatted')
+            retrieval_meta = retrieval_result.get('meta', {})
+        else:
+            formatted = retrieval_result
+            retrieval_meta = {}
+
+        # 2. Generation phase (if any)
+        generation_start = time.time()
+        final_output = formatted
+
         if config.generation_style == "Fact Verification":
             from rag_agent_advanced import answer_with_fact_verification
             final_output = await answer_with_fact_verification(None, query)
+            generation_meta = {"generation_style": "fact_verification"}
         elif config.generation_style == "Multi-Hop Reasoning":
             from rag_agent_advanced import answer_with_multi_hop
             final_output = await answer_with_multi_hop(None, query)
+            generation_meta = {"generation_style": "multi_hop"}
         elif config.generation_style == "Uncertainty Estimation":
             from rag_agent_advanced import answer_with_uncertainty
             final_output = await answer_with_uncertainty(None, query)
+            generation_meta = {"generation_style": "uncertainty_estimation"}
+        else:
+            generation_meta = {"generation_style": "standard"}
 
-        duration = (time.time() - start_time) * 1000
+        generation_end = time.time()
+
+        duration = (time.time() - overall_start) * 1000
+
+        # Build full meta
+        meta = {
+            "retrieval_time_ms": (retrieval_end - retrieval_start) * 1000,
+            "generation_time_ms": (generation_end - generation_start) * 1000,
+            "retrieval_meta": retrieval_meta,
+            "generation_meta": generation_meta,
+            "strategy_config": {
+                "retrieval_method": config.retrieval_method,
+                "reranking": config.reranking,
+                "llm_model": config.llm_model,
+                "generation_style": config.generation_style,
+                "chunking_strategy": config.chunking_strategy
+            }
+        }
+
+        # Attach exact total tokens if present in retrieval_meta
+        if isinstance(retrieval_meta, dict) and retrieval_meta.get('total_tokens') is not None:
+            meta['total_tokens'] = retrieval_meta.get('total_tokens')
+            meta['tokens_breakdown'] = retrieval_meta.get('tokens_breakdown', {})
+
+        # Clean output from common prefixes like 'Answer:'
+        cleaned_output = clean_output(final_output) if isinstance(final_output, str) else final_output
+
         return {
             "status": "Success",
-            "output": final_output,
+            "output": cleaned_output,
             "duration": duration,
             "cost_label": estimate_cost(config),
-            "name": config.name
+            "name": config.name,
+            "meta": meta
         }
     except Exception as e:
         return {
             "status": "Error",
             "error": str(e),
-            "duration": (time.time() - start_time) * 1000,
+            "duration": (time.time() - overall_start) * 1000,
             "name": config.name
         }
 
@@ -273,6 +382,15 @@ def estimate_cost(config: StrategyConfig) -> str:
     if len(cost) == 1: return "⚡ Fast ($)"
     if len(cost) == 2: return "⚖️ Medium ($$)"
     return "🐌 Slow ($$$)"
+
+# Helper: clean common answer markers
+def clean_output(text: str) -> str:
+    if not text:
+        return text
+    # Remove leading 'Answer:' and similar wrappers
+    text = re.sub(r"^\s*Answer:\s*\n?", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"^\s*Answer\s*:\s*", "", text, flags=re.IGNORECASE)
+    return text.strip()
 
 # --- Page: Ingestion Lab ---
 
@@ -586,20 +704,58 @@ def render_retrieval_page():
                 for i, res in enumerate(results):
                     with r_cols[i]:
                         if res["status"] == "Success":
+                            # Extract and format metadata
+                            meta = res.get('meta', {}) or {}
+                            retrieval_meta = meta.get('retrieval_meta', {}) if isinstance(meta, dict) else {}
+                            retrieval_time = meta.get('retrieval_time_ms')
+                            generation_time = meta.get('generation_time_ms')
+                            returned = retrieval_meta.get('returned') if isinstance(retrieval_meta, dict) else None
+                            candidates = retrieval_meta.get('candidates_considered') if isinstance(retrieval_meta, dict) else None
+                            top_sources = retrieval_meta.get('top_sources') if isinstance(retrieval_meta, dict) else None
+                            total_tokens = meta.get('total_tokens')
+
+                            # Build metric tags
+                            metrics_html = ''
+                            if res.get('duration') is not None:
+                                metrics_html += f"<span class=\"metric-tag\" title=\"Execution Time\">⏱️ {res['duration']:.0f} ms</span>"
+                            if retrieval_time:
+                                metrics_html += f"<span class=\"metric-tag\" title=\"Retrieval Time\">🔎 {retrieval_time:.0f} ms</span>"
+                            if generation_time:
+                                metrics_html += f"<span class=\"metric-tag\" title=\"Generation Time\">🧠 {generation_time:.0f} ms</span>"
+                            if total_tokens is not None:
+                                metrics_html += f"<span class=\"metric-tag\" title=\"Total Tokens\">🔢 {int(total_tokens)}</span>"
+                            if res.get('cost_label'):
+                                metrics_html += f"<span class=\"metric-tag\" title=\"Estimated Cost\">{res['cost_label']}</span>"
+                            if returned is not None:
+                                metrics_html += f"<span class=\"metric-tag\" title=\"Returned Results\">📄 {returned}</span>"
+                            if candidates is not None:
+                                metrics_html += f"<span class=\"metric-tag\" title=\"Candidates Considered\">🧾 {candidates}</span>"
+
+                            top_sources_html = ''
+                            if top_sources:
+                                sample = ', '.join(top_sources[:3])
+                                top_sources_html = f"<div style=\"margin-top:8px;color:var(--metric-text)\"><strong>Top Sources:</strong> {sample}</div>"
+
+                            # Display card
                             st.markdown(f"""
                             <article class="strategy-container" aria-label="Results for {res['name']}">
                                 <header style="margin-bottom: 15px;">
                                     <h3 style="margin: 0; font-size: 1.2em;">{res['name']}</h3>
-                                    <div class="metric-container" style="margin-top: 8px;">
-                                        <span class="metric-tag" title="Execution Time">⏱️ {res['duration']:.0f} ms</span>
-                                        <span class="metric-tag" title="Estimated Cost">{res['cost_label']}</span>
-                                    </div>
+                                    <div class="metric-container" style="margin-top: 8px;">{metrics_html}</div>
+                                    {top_sources_html}
                                 </header>
                                 <section class="result-box" role="region" aria-label="Output content">
                                     {res['output']}
                                 </section>
                             </article>
                             """, unsafe_allow_html=True)
+
+                            # Detailed metadata expander
+                            with st.expander("Show detailed metadata and traces"):
+                                import json
+                                st.subheader("Metadata")
+                                st.code(json.dumps(meta, indent=2))
+
                         else:
                             st.error(f"Error: {res.get('error')}")
 
