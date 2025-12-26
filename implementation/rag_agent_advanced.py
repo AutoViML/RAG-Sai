@@ -391,7 +391,7 @@ async def search_knowledge_base_meta(ctx: RunContext[None], query: str, limit: i
         top_sources = []
         for i, row in enumerate(results, 1):
             response_parts.append(f"[Source: {row['document_title']}\n]{row['content']}\n")
-            top_sources.append(row['document_title'])
+            top_sources.append(row.get('document_title'))
         formatted = (f"Found {len(response_parts)} relevant results:\n\n" + "\n---\n".join(response_parts))
         meta = {"returned": len(response_parts), "top_sources": top_sources}
         return {"formatted": formatted, "meta": meta}
