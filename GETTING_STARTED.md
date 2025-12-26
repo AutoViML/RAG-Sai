@@ -74,6 +74,23 @@ python --version  # Should be >= 3.9
 # Option B: Local
 sudo apt-get install postgresql-16 postgresql-16-pgvector
 sudo service postgresql start
+
+# 3. System dependencies (Ubuntu/Debian)
+sudo apt-get update && sudo apt-get install -y \
+    ffmpeg \
+    build-essential \
+    gcc \
+    postgresql-client \
+    libpq-dev
+
+# macOS:
+brew install ffmpeg postgresql
+xcode-select --install  # For build tools
+
+# Windows:
+# - Install ffmpeg from ffmpeg.org
+# - Install PostgreSQL from postgresql.org
+# - Install Visual Studio Build Tools
 ```
 
 #### Step 2: Install Dependencies (5 minutes)

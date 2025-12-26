@@ -17,13 +17,14 @@ Perfect for: AI engineers, ML practitioners, data science students, and anyone b
 
 1. [Strategy Overview](#-strategy-overview)
 2. [Quick Start](#-quick-start)
-3. [For Students & Learners](#-for-students--learners) ⭐ NEW
-4. [Pseudocode Examples](#-pseudocode-examples)
-5. [Code Examples](#-code-examples)
-6. [Detailed Strategy Guide](#-detailed-strategy-guide)
-7. [Repository Structure](#-repository-structure)
-8. [Testing](#-testing) ⭐ NEW
-9. [Troubleshooting](#-troubleshooting) ⭐ NEW
+3. [Prerequisites](#-prerequisites) ⭐
+4. [For Students & Learners](#-for-students--learners) ⭐ NEW
+5. [Pseudocode Examples](#-pseudocode-examples)
+6. [Code Examples](#-code-examples)
+7. [Detailed Strategy Guide](#-detailed-strategy-guide)
+8. [Repository Structure](#-repository-structure)
+9. [Testing](#-testing) ⭐ NEW
+10. [Troubleshooting](#-troubleshooting) ⭐ NEW
 
 ---
 
@@ -50,6 +51,50 @@ Perfect for: AI engineers, ML practitioners, data science students, and anyone b
 
 ### Legend
 - ✅ **Code Example**: Full code in `implementation/` (educational, not production-ready)
+
+---
+
+## 📋 Prerequisites
+
+### System Requirements
+- **Python 3.9+**
+- **PostgreSQL with pgvector extension**
+  - Cloud options: [Neon](https://neon.tech), [Supabase](https://supabase.com)
+  - Self-hosted: PostgreSQL 12+ with pgvector
+
+### System Dependencies
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update && sudo apt-get install -y \
+    ffmpeg \
+    build-essential \
+    gcc \
+    postgresql-client \
+    libpq-dev
+```
+
+**macOS:**
+```bash
+brew install ffmpeg postgresql
+# Xcode Command Line Tools (includes gcc, build tools)
+xcode-select --install
+```
+
+**Windows:**
+- ffmpeg: Download from [ffmpeg.org](https://ffmpeg.org)
+- PostgreSQL: Download from [postgresql.org](https://www.postgresql.org/download/windows/)
+- Build tools: Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
+
+**What each package does:**
+- `ffmpeg` - Audio/video processing for Whisper transcription
+- `build-essential` & `gcc` - Compilers for building Python packages (psycopg2, etc.)
+- `postgresql-client` - PostgreSQL command-line tools (psql)
+- `libpq-dev` - PostgreSQL development headers for psycopg2
+
+### API Keys
+- **OpenAI API Key** for embeddings and LLM
+  - Get from: [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
 - 📝 **Pseudocode Only**: Conceptual examples in `examples/`
 
 ---

@@ -32,6 +32,14 @@ The `implementation/` directory contains the runnable code.
 
 ### 1. Prerequisites
 *   **PostgreSQL**: Must be running with the `pgvector` extension enabled.
+*   **System Dependencies**:
+    *   `ffmpeg` - Audio file transcription (MP3, WAV)
+    *   `build-essential` & `gcc` - Compiling Python packages
+    *   `postgresql-client` - Database CLI tools (psql)
+    *   `libpq-dev` - PostgreSQL headers for psycopg2
+    *   Ubuntu/Debian: `sudo apt-get install -y ffmpeg build-essential gcc postgresql-client libpq-dev`
+    *   macOS: `brew install ffmpeg postgresql && xcode-select --install`
+    *   All included in Dockerfile for containerized deployments
 *   **Environment Variables**: A `.env` file is required.
 
 ### 2. Setup

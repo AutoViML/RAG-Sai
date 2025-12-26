@@ -47,9 +47,10 @@ This repository is designed as an educational resource to help you understand an
 
 #### Week 1: RAG Basics
 1. **Read**: `README.md` for project overview
-2. **Study**: `docs/01-reranking.md` - Start with simplest enhancement
-3. **Code**: Review `examples/01_reranking.py` (< 50 lines)
-4. **Experiment**: Understand two-stage retrieval (fast search → precise reranking)
+2. **Setup**: Install prerequisites (Python 3.9+, PostgreSQL, ffmpeg for audio support)
+3. **Study**: `docs/01-reranking.md` - Start with simplest enhancement
+4. **Code**: Review `examples/01_reranking.py` (< 50 lines)
+5. **Experiment**: Understand two-stage retrieval (fast search → precise reranking)
 
 **Hands-on Exercise**:
 ```bash

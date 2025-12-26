@@ -10,28 +10,30 @@ Welcome to the RAG Strategy Lab! This tool helps you learn and experiment with a
 # 1. Navigate to implementation folder
 cd implementation
 
-# 2. Install dependencies
+# 2. Install system dependencies
+# Ubuntu/Debian:
+sudo apt-get update && sudo apt-get install -y \
+    ffmpeg \
+    build-essential \
+    gcc \
+    postgresql-client \
+    libpq-dev
+
+# macOS:
+brew install ffmpeg postgresql
+xcode-select --install
+
+# 3. Install Python dependencies
 pip install -r requirements-advanced.txt
 # or with uv:
 uv sync
-# Optional extras (OCR / ASR / image processing)
-# If you want scanned PDF OCR or audio transcription (Whisper), install these:
-# (recommended only if you need them - they increase disk usage and require extra system packages)
-#  - ONNX-based OCR: onnxruntime
-#  - EasyOCR: easyocr
-#  - Tesseract bindings: tesserocr (requires system package 'tesseract-ocr')
-#  - Whisper ASR: openai-whisper (requires ffmpeg and additional disk space)
-#  - Image processing: opencv-python-headless
 
-# Example (installs these extras into the venv):
-. .venv/bin/activate && pip install --no-cache-dir onnxruntime easyocr tesserocr opencv-python-headless
-# For Whisper ASR (optional, large and may require compiling wheels):
-. .venv/bin/activate && pip install --no-cache-dir openai-whisper
-
-# System packages (if you use tesserocr or Whisper):
-# Debian/Ubuntu:
-# sudo apt-get update && sudo apt-get install -y tesseract-ocr ffmpeg libgl1 libglib2.0-0
-```# 3. Setup PostgreSQL
+# Note: System dependencies are required for:
+# - ffmpeg: Audio transcription with Whisper
+# - build-essential/gcc: Compiling Python packages (psycopg2, etc.)
+# - postgresql-client: Database command-line tools
+# - libpq-dev: PostgreSQL development headers
+```# 4. Setup PostgreSQL
 sudo service postgresql start
 sudo -u postgres psql -c "CREATE DATABASE ragdb;"
 sudo -u postgres psql -c "CREATE USER raguser WITH PASSWORD 'ragpass123';"

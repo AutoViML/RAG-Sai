@@ -181,6 +181,145 @@ psql $DATABASE_URL -c "SELECT COUNT(*) FROM chunks;"
 ```
 
 **Common causes:**
+- Files have wrong permissions (chmod 644)
+- Unsupported file format
+- Missing ffmpeg for audio files
+
+---
+
+### Issue: Missing system dependencies
+
+**Symptoms:**
+```
+# For ffmpeg:
+ERROR - Audio tranciption has an error: [Errno 2] No such file or directory: 'ffmpeg'
+
+# For gcc/build tools:
+error: command 'gcc' failed: No such file or directory
+ERROR: Failed building wheel for psycopg2
+
+# For PostgreSQL client:
+psql: command not found
+
+# For libpq:
+Error: pg_config executable not found
+```
+
+**Solution - Install ALL system dependencies:**
+
+**For Ubuntu/Debian:**
+```bash
+sudo apt-get update && sudo apt-get install -y \
+    ffmpeg \
+    build-essential \
+    gcc \
+    postgresql-client \
+    libpq-dev
+
+# Verify installations
+ffmpeg -version
+gcc --version
+psql --version
+pg_config --version
+```
+
+**For macOS:**
+```bash
+# Install packages
+brew install ffmpeg postgresql
+
+# Install Xcode Command Line Tools
+xcode-select --install
+
+# Verify installations
+ffmpeg -version
+gcc --version
+psql --version
+```
+
+**For Windows:**
+1. **ffmpeg**: Download from https://ffmpeg.org/download.html and add to PATH
+2. **PostgreSQL**: Download from https://www.postgresql.org/download/windows/
+3. **Build Tools**: Install Visual Studio Build Tools from https://visualstudio.microsoft.com/downloads/
+
+**Docker users:** All dependencies are included in the Dockerfile
+
+---
+
+### Issue: "[Errno 2] No such file or directory: 'ffmpeg'"
+
+**Symptoms:**
+```
+ERROR - Audio tranciption has an error: [Errno 2] No such file or directory: 'ffmpeg'
+WARNING - ❌ Failed to transcribe with WHISPER_TINY
+```
+
+**Cause:** Audio files (MP3, WAV) require ffmpeg for transcription, but it's not installed.
+
+**Solution:**
+
+**For Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install -y ffmpeg
+
+# Verify installation
+ffmpeg -version
+```
+
+**For macOS:**
+```bash
+brew install ffmpeg
+
+# Verify installation
+ffmpeg -version
+```
+
+**For Windows:**
+1. Download from https://ffmpeg.org/download.html
+2. Extract and add to PATH
+3. Restart terminal
+4. Verify: `ffmpeg -version`
+
+**Docker users:** ffmpeg is already included in the Dockerfile (line 6)
+
+**After installation:**
+```bash
+# Re-run ingestion
+cd implementation
+python -m ingestion.ingest --documents ./documents
+```
+
+---
+
+### Issue: Audio files not transcribed
+
+**Symptoms:**
+- Audio files processed but only create placeholder chunks
+- No actual transcription content
+
+**Debug steps:**
+```bash
+# 1. Verify ffmpeg is installed
+ffmpeg -version
+
+# 2. Check if Whisper model loads
+python -c "import whisper; print(whisper.available_models())"
+
+# 3. Check system resources
+python -c "from ingestion.resource_monitor import ResourceMonitor; ResourceMonitor.print_resource_summary()"
+
+# 4. Try with smaller Whisper model
+python -m ingestion.ingest --documents ./documents --mode light
+```
+
+**Common causes:**
+- ffmpeg not installed (see above)
+- Insufficient RAM for Whisper model (use --mode light)
+- Corrupted audio files
+- Unsupported audio codec
+
+---
 1. Empty documents folder
 2. Unsupported file formats (use PDF, DOCX, MD, TXT)
 3. Corrupted files

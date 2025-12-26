@@ -28,6 +28,30 @@ These tutorials provide the foundation for understanding how this full RAG agent
 
 - Python 3.9 or later
 - PostgreSQL with PGVector extension (Supabase, Neon, self-hosted Postgres, etc.)
+
+### System Dependencies
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update && sudo apt-get install -y \
+    ffmpeg \
+    build-essential \
+    gcc \
+    postgresql-client \
+    libpq-dev
+```
+
+**macOS:**
+```bash
+brew install ffmpeg postgresql
+xcode-select --install
+```
+
+**Windows:**
+- ffmpeg: [ffmpeg.org](https://ffmpeg.org)
+- PostgreSQL client: [postgresql.org](https://www.postgresql.org/download/windows/)
+- Build Tools: [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
+
 - API Keys:
   - OpenAI API key (for embeddings and LLM)
 

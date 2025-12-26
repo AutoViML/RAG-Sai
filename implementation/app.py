@@ -77,16 +77,30 @@ def ensure_postgres_running():
     """Ensure PostgreSQL container is running."""
     import subprocess
     try:
-        # Check if Docker is available
+        # Check if Docker is available and container exists (running or stopped)
         result = subprocess.run(
-            ["docker", "ps", "--filter", "name=rag_postgres", "--format", "{{.Names}}"],
+            ["docker", "ps", "-a", "--filter", "name=rag_postgres", "--format", "{{.Names}}:{{.Status}}"],
             capture_output=True,
             text=True,
             timeout=5
         )
         
-        if "rag_postgres" not in result.stdout:
-            # PostgreSQL not running, start it
+        if "rag_postgres" in result.stdout:
+            # Container exists, check if it's running
+            if "Up" not in result.stdout:
+                # Container exists but is stopped, start it
+                subprocess.run(
+                    ["docker", "start", "rag_postgres"],
+                    capture_output=True,
+                    timeout=15
+                )
+                # Wait for PostgreSQL to be ready
+                time.sleep(3)
+                return True
+            # Already running
+            return True
+        else:
+            # Container doesn't exist, create and start it with docker-compose
             compose_path = os.path.join(os.path.dirname(__file__), "docker-compose.yml")
             if os.path.exists(compose_path):
                 subprocess.run(
@@ -96,7 +110,7 @@ def ensure_postgres_running():
                     timeout=30
                 )
                 # Wait for PostgreSQL to be ready
-                time.sleep(3)
+                time.sleep(5)
                 return True
         return True
     except Exception as e:
