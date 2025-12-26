@@ -692,8 +692,10 @@ sudo ufw allow 8501
 
 3. **Access via correct URL:**
 ```
+# Typical URL (default on most systems)
 http://localhost:8501
-# Not http://127.0.0.1:8501 (sometimes matters)
+# If localhost does not work, try the loopback IP instead (behavior can vary by system)
+http://127.0.0.1:8501
 ```
 
 ---

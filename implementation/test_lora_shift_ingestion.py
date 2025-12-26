@@ -4,11 +4,8 @@ Tests document processing, chunking, embedding, and retrieval without requiring 
 """
 
 import pytest
-import os
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
-import asyncio
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -55,7 +52,10 @@ class TestLoRAShiftIngestion:
             "rank", "matrix", "efficiency", "performance"
         ]
         found_terms = sum(1 for term in technical_terms if term.lower() in sample_paper_content.lower())
-        assert found_terms >= 5, f"Paper should contain technical terminology, found {found_terms}/{len(technical_terms)} terms"
+        assert found_terms >= 5, (
+            f"Paper should contain technical terminology: "
+            f"found {found_terms} of {len(technical_terms)} terms (minimum required: 5)"
+        )
 
 
 class TestChunkingLogic:
@@ -133,11 +133,15 @@ Experiments show 15-25% improvement over standard LoRA."""
             start = end - overlap if end < len(words) else end
         
         assert len(chunks) > 1, "Should create multiple chunks"
-        # Check overlap exists between consecutive chunks
+        # Check that consecutive chunks overlap by exactly `overlap` words
         if len(chunks) > 1:
-            chunk1_words = set(chunks[0].split()[-overlap:])
-            chunk2_words = set(chunks[1].split()[:overlap])
-            assert len(chunk1_words & chunk2_words) > 0, "Chunks should have overlapping content"
+            chunk1_words = chunks[0].split()
+            chunk2_words = chunks[1].split()
+            overlap1 = chunk1_words[-overlap:]
+            overlap2 = chunk2_words[:overlap]
+            assert len(overlap1) == overlap, f"First chunk should end with {overlap} overlap words"
+            assert len(overlap2) == overlap, f"Second chunk should start with {overlap} overlap words"
+            assert overlap1 == overlap2, "Chunks should overlap by the exact number of words specified"
 
 
 class TestEmbeddingGeneration:
@@ -245,9 +249,10 @@ class TestIngestionPipelineIntegration:
     @pytest.mark.asyncio
     async def test_mock_retrieval_flow(self):
         """Test retrieval flow with mocks."""
-        # Mock query
-        query = "What is LoRA-SHIFT?"
+        # Mock query embedding
         query_embedding = [0.1] * 1536
+        # Ensure query embedding has expected dimensionality
+        assert len(query_embedding) == 1536
         
         # Mock stored chunks (from previous ingestion)
         stored_chunks = [
@@ -284,7 +289,7 @@ class TestErrorHandling:
         # In real implementation, should raise FileNotFoundError or return error
         try:
             with open(nonexistent_path, 'r') as f:
-                content = f.read()
+                f.read()
             assert False, "Should raise FileNotFoundError"
         except FileNotFoundError:
             pass  # Expected
