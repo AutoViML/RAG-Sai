@@ -19,8 +19,8 @@ def get_schemas():
 @st.cache_data(ttl="10m")
 def get_tables(schema_name):
     # Query information_schema.tables to get tables in a specific schema
-    query = f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{schema_name}';"
-    df_tables = conn.query(query)
+    query = "SELECT table_name FROM information_schema.tables WHERE table_schema = :schema_name;"
+    df_tables = conn.query(query, params={"schema_name": schema_name})
     return df_tables['table_name'].tolist()
 
 # Function to get columns (schema) for a selected table
