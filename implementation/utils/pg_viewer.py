@@ -37,7 +37,7 @@ def get_row_count(schema_name, table_name):
     safe_schema_name = schema_name.replace('"', '""')
     safe_table_name = table_name.replace('"', '""')
     query = f'SELECT count(*) FROM "{safe_schema_name}"."{safe_table_name}";'
-    df_count = conn.query(query)
+    df_count = conn.query(query, ttl="10m")
     return df_count.iloc[0, 0]
 
 # --- Streamlit UI ---
