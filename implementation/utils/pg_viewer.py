@@ -64,7 +64,10 @@ if schemas:
             sample_data_df = conn.query(sample_data_query, ttl="10m")
             st.dataframe(sample_data_df, use_container_width=True)
         except Exception as e:
-            st.warning(f"Could not fetch sample data: {e}")
+            st.warning(
+                f"Could not fetch sample data. This may be due to permission issues, "
+                f"table access restrictions, or connectivity problems. Error details: {e}"
+            )
            
     else:
         st.info("No tables found in this schema.")
